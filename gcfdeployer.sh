@@ -34,6 +34,7 @@ function parse_yaml {
 }
 config_path=$2/config.yml
 env_vars_counter=0
+serv_acc=""
 my_array=( $(parse_yaml $config_path) )
 touch env_vars.yml
 for i in "${my_array[@]}"
@@ -46,14 +47,27 @@ do
         read -p "Enter value for environment variable \""$foo"\":"  input
         echo $foo": "$input >> env_vars.yml
     fi
+    if  [[ $i == "other_prompts_service_account"* ]] && [[ $i == *"\"mandatory\"" ]];
+    then
+        read -p "Enter e-mail address of the service account that this function will use:"  serv_acc 
+    fi
 done
 
 if [ "$env_vars_counter" -eq "0" ]; 
     then
-    gcloud functions deploy --source=$sourcepath --region=$3 --trigger-http --runtime=python37 --entry-point=execute $4
+        env_vars_file=""
     else
-    gcloud functions deploy --source=$sourcepath --region=$3 --trigger-http --runtime=python37 --entry-point=execute --env-vars-file env_vars.yml $4
+        env_vars_file="--env-vars-file env_vars.yml"
 fi
+
+if [ -z "$serv_acc" ]
+    then
+        serv_acc_param=""
+    else
+        serv_acc_param="--service-account="$serv_acc
+fi
+
+gcloud functions deploy --source=$sourcepath --region=$3 --trigger-http --runtime=python37 --entry-point=execute $env_vars_file $serv_acc_param $4
 
 cd ..
 rm -rf temp
