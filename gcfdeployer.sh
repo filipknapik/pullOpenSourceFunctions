@@ -35,6 +35,8 @@ function parse_yaml {
 config_path=$2/config.yml
 env_vars_counter=0
 serv_acc=""
+secret_function=""
+access_key=""
 my_array=( $(parse_yaml $config_path) )
 touch env_vars.yml
 for i in "${my_array[@]}"
@@ -50,6 +52,21 @@ do
     if  [[ $i == "other_prompts_service_account"* ]] && [[ $i == *"\"mandatory\"" ]];
     then
         read -p "Enter e-mail address of the service account that this function will use:"  serv_acc 
+    fi
+    if  [[ $i == "secrets"* ]] && [ -z "$secret_function" ];
+    then
+        read -p "Enter URL of the Secrets function in this project:"  secret_function 
+    fi
+    if  [[ $i == "secrets"* ]] && [ -z "$access_key" ];
+    then
+        read -p "Enter access key for the Secrets function in this project:"  access_key 
+    fi
+    if  [[ $i == "secrets"* ]];
+    then
+        keyname=${i#"secrets_"}
+        keyname=${keyname%"=\"mandatory\""}
+        read -p "Enter value for secret \""$keyname"\":"  secret_value
+        curl -X POST -H 'Content-type: application/json' -d '{"action":"storesecret", "access_key":"'$access_key'", "secret_key":"'$keyname'","secret_value":"'$secret_value'"}' $secret_function
     fi
 done
 
